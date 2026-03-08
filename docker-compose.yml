@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secreto_super_seguro}
       POSTGRES_DB: ${POSTGRES_DB:-ms247_db}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -33,6 +33,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ms247_admin}:${POSTGRES_PASSWORD:-secreto_super_seguro}@db:5432/${POSTGRES_DB:-ms247_db}
     volumes:
       - .:/app
+      - ./logs:/app/logs
       - /app/__pycache__
     # El CMD o ENTRYPOINT inicializa el encendido tal cual la Fase 4
 

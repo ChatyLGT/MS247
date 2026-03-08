@@ -3,8 +3,11 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
+from core.logger_omnisciente import obtener_chismografo, log_evento_crudo
+
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+log = obtener_chismografo("GEMINI_API")
 
 def obtener_mime_type(file_path):
     ext = os.path.splitext(file_path)[1].lower()
@@ -22,12 +25,16 @@ async def describir_contenido_multimodal(file_path):
 
     try:
         prompt = "Si es audio, transcribe TODO exactamente. Si es PDF/Imagen, describe el contenido clave detalladamente."
+        log.info(f"📤 [GEMINI VISION/AUDIO] Procesando archivo: {file_path} (MIME: {mime})")
+        
         response = await client.aio.models.generate_content(
             model="gemini-2.0-flash",
             contents=[types.Part.from_bytes(data=file_bytes, mime_type=mime), prompt]
         )
+        log_evento_crudo("GEMINI_API", f"📥 [EXTRACCIÓN MULTIMODAL EXITOSA]", {"transcripcion": response.text.strip()})
         return response.text.strip()
     except Exception as e:
+        log.error(f"🔥 Error en percepción multimodal: {e}")
         return f"Error en percepción: {e}"
 
 import asyncio
@@ -36,7 +43,7 @@ from core import db
 async def procesar_multimodal(file_path, prompt_agente):
     descripcion = await describir_contenido_multimodal(file_path)
     prompt_final = f"{prompt_agente}\n\nCONTENIDO DEL ARCHIVO RECIBIDO: {descripcion}"
-    texto, tokens = await procesar_texto_puro(prompt_final, "[Archivo Adjunto]")
+    texto = await procesar_texto_puro(prompt_final, "[Archivo Adjunto]")
     return texto, descripcion
 
 async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, telegram_id=None, tools=None):
@@ -49,11 +56,16 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
             
         config = types.GenerateContentConfig(**kwargs) if kwargs else None
             
+        log.info(f"🤖 [GEMINI PROMPT IN] MODO JSON: {modo_json}")
+        log.debug(f"[SYSTEM PROMPT]:\n{prompt_sistema}\n[USER TEXT]:\n{texto_usuario}")
+            
         response = await client.aio.models.generate_content(
             model="gemini-2.0-flash",
             contents=f"{prompt_sistema}\n\nUsuario: {texto_usuario}\nREGLA: Máximo 1500 caracteres.",
             config=config
         )
+        
+        log_evento_crudo("GEMINI_API", "✅ [GEMINI RESPONSE OUT]", {"respuesta_raw": response.text})
         
         # Telemetría
         if response.usage_metadata and telegram_id:
@@ -63,5 +75,5 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
                 
         return response.text
     except Exception as e:
-        print(f"🔥 ERROR GEMINI CRÍTICO: {e}")
+        log.error(f"🔥 ERROR GEMINI CRÍTICO: {e}")
         return "Error en mis neuronas."
