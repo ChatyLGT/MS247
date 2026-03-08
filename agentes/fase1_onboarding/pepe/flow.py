@@ -17,6 +17,13 @@ def compilar_cerebro_pepe():
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 alma_compilada += f"\n\n### MODULO: {modulo.upper()} ###\n{f.read()}"
+    
+    # Inyectar las 150 preguntas como anexo
+    path_cuestionario = "knowledge_base/cuestionario_pepe_150.md"
+    if os.path.exists(path_cuestionario):
+        with open(path_cuestionario, "r", encoding="utf-8") as f:
+             alma_compilada += f"\n\n### MODULO: CUESTIONARIO_150 ###\n{f.read()}"
+             
     return alma_compilada
 
 async def manejar_pepe(update, context, telegram_id, texto, file_path=None):

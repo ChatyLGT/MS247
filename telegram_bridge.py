@@ -106,6 +106,11 @@ async def manejar_callback(update, context):
     elif query.data == "ir_a_pepe":
         db.actualizar_campo_usuario(user.id, "estado_onboarding", "PEPE_ACTIVO")
         await orquestar_mensaje(update, context, user.id, "PEPE_ACTIVO", "INICIAR_DIAGNOSTICO")
+    elif query.data == "pepe_avanzar_maria":
+        db.actualizar_campo_usuario(user.id, "estado_onboarding", "MARIA_ACTIVO")
+        await orquestar_mensaje(update, context, user.id, "MARIA_ACTIVO", "INICIAR_ARQUITECTURA")
+    elif query.data == "pepe_mas_contexto":
+        await orquestar_mensaje(update, context, user.id, "PEPE_ACTIVO", "Quiero seguir profundizando los detalles de mi modelo de negocio.")
 
 if __name__ == '__main__':
     log.info("🚀 Matriz activa. UX de Pepe y Handoff conectados.")

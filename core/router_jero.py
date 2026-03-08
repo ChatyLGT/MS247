@@ -165,6 +165,14 @@ async def orquestar_mensaje(update, context, telegram_id, estado_actual, conteni
     log.info(f"Input Final a procesar: {texto_a_procesar[:100]}...")
     await context.bot.send_chat_action(chat_id=telegram_id, action=ChatAction.TYPING)
     
+    # Inyectar memoria reciente para evitar amnesia
+    adn_info = db.obtener_adn_completo(telegram_id) or {}
+    historial_raw = adn_info.get("historial_reciente") or []
+    
+    if historial_raw and isinstance(historial_raw, list):
+        historial_str = "\n".join([f"[{msg.get('rol', 'UNKNOWN')}]: {msg.get('txt', '')}" for msg in historial_raw])
+        texto_a_procesar = f"--- HISTORIAL RECIENTE ---\n{historial_str}\n--------------------------\n\n[MENSAJE ACTUAL DEL USUARIO]:\n{texto_a_procesar}"
+
     initial_state = {
         "update": update,
         "context": context,

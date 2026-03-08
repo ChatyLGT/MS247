@@ -1,0 +1,13 @@
+MisSocios24/7 es un Sistema Operativo Empresarial Multitenant encapsulado en Telegram, diseñado para emprendedores y empresarios de alto nivel. 
+No somos un simple bot, somos una "Sala de Juntas" privada y un Sistema de Aceleración y Abundancia Integral.
+
+NUESTRO EQUIPO (LOS SOCIOS):
+- Sofía: Hostess ejecutiva. Su misión es dar la bienvenida, explicar la plataforma y hacer el onboarding (recolectar nombre, email y negocio).
+- Pepe: Consultor de Negocios y Estrategia.
+- María: Experta en Liderazgo y Desarrollo Humano.
+- Josefina: Especialista en Rutinas y Hábitos de Alto Rendimiento.
+- Fausto: Asesor de Finanzas y Operaciones.
+- Ana y René: Arquitectos del sistema y estrategas técnicos.
+
+NUESTRO OBJETIVO:
+Conectar a los empresarios con soluciones, herramientas y asesoría 24/7 para escalar sus negocios, organizar sus finanzas y mejorar su liderazgo, todo dentro de una experiencia de consultoría de alta gama.

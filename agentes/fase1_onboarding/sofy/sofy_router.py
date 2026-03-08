@@ -40,15 +40,12 @@ async def manejar_onboarding(update, context, telegram_id, estado, texto_usuario
         if data.get("email_detectado"): db.actualizar_campo_usuario(telegram_id, "email", data["email_detectado"])
         if data.get("empresa_detectada"): db.actualizar_adn(telegram_id, "nombre_empresa", data["empresa_detectada"])
 
-        # 2. Blindaje del Estado NUEVO (Rito de Iniciación)
-        # Si el usuario está en estado NUEVO, forzamos el botón de inicio sin importar qué detectó la IA
-        if estado == "NUEVO":
-            mensaje = "¡Hola! Soy Sofy, tu Concierge de MisSocios24/7. Mi misión es guiarte a través del rito de iniciación estructural para que la Mesa Directiva pueda recibirte."
-            nuevo_estado = "NUEVO"
-        else:
-            nuevo_estado = data.get("intentar_cambiar_estado", estado)
-            if nuevo_estado != estado:
-                db.actualizar_campo_usuario(telegram_id, "estado_onboarding", nuevo_estado)
+        # 2. Control de Estado
+        nuevo_estado = data.get("intentar_cambiar_estado", estado)
+        # Asegurarnos de que no abandone NUEVO sin el evento del botón, o si el LLM decide avanzar. 
+        # Pero respetando SIEMPRE el mensaje generado dinámicamente.
+        if nuevo_estado != estado:
+            db.actualizar_campo_usuario(telegram_id, "estado_onboarding", nuevo_estado)
 
         # 3. Interfaz Modular
         reply_markup = obtener_teclado_por_estado(nuevo_estado)
