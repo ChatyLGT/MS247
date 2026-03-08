@@ -1,0 +1,11 @@
+python-telegram-bot>=21.0
+google-genai
+psycopg2-binary
+python-dotenv
+langgraph
+apscheduler
+pymupdf
+requests
+pytest
+pytest-asyncio
+pytest-mock
