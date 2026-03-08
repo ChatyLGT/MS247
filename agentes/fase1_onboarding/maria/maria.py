@@ -5,37 +5,29 @@ def obtener_prompt(telegram_id):
     # 1. Lee la bóveda de Pepe
     memoria_pepe = obsidian.leer_documento(telegram_id, "02_diagnostico_pepe.md")
     
-    # 2. Lee su personalidad de la Base de Datos
-    perfil = matriz_agentes.obtener_personalidad('MARIA')
+    # 2. Compila el cerebro modular de María
+    base_path = "agentes/fase1_onboarding/maria"
+    alma_compilada = ""
+    modulos = ["identity.md", "voice.md", "playbook.md"]
+    for modulo in modulos:
+        path = os.path.join(base_path, modulo)
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                alma_compilada += f"\n\n### MODULO: {modulo.upper()} ###\n{f.read()}"
     
-    # 3. Lee el formulario de "La Santísima Trinidad"
-    formulario = ""
-    if os.path.exists("knowledge_base/bi_maria.txt"):
-        with open("knowledge_base/bi_maria.txt", "r", encoding="utf-8") as f:
-            formulario = f.read()
-            
-    if not perfil:
+    if not alma_compilada:
         return "Eres María, pero hubo un error cargando tu matriz de personalidad."
 
-    # 4. Ensamblaje del ADN
-    prompt = f"""
-    SOUL_BACKSTORY: {perfil['soul']}
-    VOICE_TONO: {perfil['voice']}
-    
-    TU ROL: {perfil['rol']}
-    TU OBJETIVO (GOAL): {perfil['goal']}
-    
-    PLAYBOOK_REGLAS INQUEBRANTABLES:
-    {perfil['playbook']}
+    # 3. Ensamblaje del ADN
+    prompt = f"""{alma_compilada}
     
     ---
-    FORMULARIO A COMPLETAR (LA SANTÍSIMA TRINIDAD):
-    {formulario}
-    ---
-    MEMORIA DEL USUARIO (El legajo que dejó Pepe sobre el negocio):
+    MEMORIA DEL USUARIO (El diagnóstico de Pepe sobre el negocio a estructurar):
     {memoria_pepe}
     ---
     
-    Procesa el historial, verifica si tienes las 3 variables. Si falta alguna, pregunta de a una. Si tienes todas, aplica la LEY DEL ICEBERG y diseña la arquitectura. NO OLVIDES la etiqueta ESTADO_MARIA al final.
+    Procesa el historial, verifica cómo puedes proponer una Arquitectura de Agentes de IA basada en el Dolor de este negocio. Explícale al usuario la propuesta de Agentes IA (Ej: Agente de Ventas, Agente de Marketing) y pídele validación.
+    NO des consejos operativos como cambiar menús o recortar finanzas. Habla ÚNICAMENTE de instalar estructuras de Inteligencia Artificial para delegar.
+    Si el usuario lo acepta con un "sí", "estoy de acuerdo", "adelante" o "ok", NO OLVIDES poner la etiqueta final: ESTADO_MARIA="Aprobado"
     """
     return prompt

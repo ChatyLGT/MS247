@@ -54,7 +54,10 @@ async def manejar_pepe(update, context, telegram_id, texto, file_path=None):
         if cr.strip().lower() == "ok" and cd.strip().lower() == "ok" and cm.strip().lower() == "ok":
             checklist_completo = True
 
-    res_limpia = re.sub(r'(?i)---.*ESTADO_CHECKLIST:.*', '', res_ia, flags=re.DOTALL).strip()
+    # 3. Limpieza de pantalla (Eliminar el JSON interno aunque la IA no ponga los guiones '---')
+    res_limpia = re.sub(r'(?i)(ESTADO_CHECKLIST|RESUMEN_ACUMULADO).*', '', res_ia, flags=re.DOTALL).strip()
+    res_limpia = re.sub(r'-{3,}', '', res_limpia).strip()
+    
     db.guardar_memoria_hilo(telegram_id, "PEPE", res_limpia)
 
     if checklist_completo:
