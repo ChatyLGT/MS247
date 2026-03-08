@@ -15,6 +15,7 @@ vault_*
 # Logs generados por la app local
 *.txt
 !requirements.txt
+!knowledge_base/*.txt
 logs/
 
 # Variables de Entorno (Donde irán tus llaves)

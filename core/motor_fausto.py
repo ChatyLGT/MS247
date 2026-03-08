@@ -1,4 +1,4 @@
-import os, psycopg2, asyncio
+import os, psycopg2, psycopg2.extras, asyncio
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from telegram import Bot
