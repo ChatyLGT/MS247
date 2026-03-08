@@ -27,4 +27,4 @@ COPY . .
 RUN chmod +x scripts/start.sh
 
 # Se establece el script maestro de arranque como Entrypoint
-ENTRYPOINT ["./scripts/start.sh"]
+ENTRYPOINT ["/bin/bash", "./scripts/start.sh"]
