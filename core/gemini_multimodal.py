@@ -57,7 +57,7 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
         config = types.GenerateContentConfig(**kwargs) if kwargs else None
             
         log.info(f"🤖 [GEMINI PROMPT IN] MODO JSON: {modo_json}")
-        log.debug(f"[SYSTEM PROMPT]:\n{prompt_sistema}\n[USER TEXT]:\n{texto_usuario}")
+        log.info(f"[SYSTEM PROMPT]:\n{prompt_sistema}\n[USER TEXT]:\n{texto_usuario}")
             
         response = await client.aio.models.generate_content(
             model="gemini-2.0-flash",
