@@ -2,6 +2,7 @@
 venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Archivos de Datos y Bóveda
 shared_memory.json
@@ -10,6 +11,10 @@ vault_*
 *.jpg
 *.pdf
 *.docx
+
+# Logs generados por la app local
+*.txt
+logs/
 
 # Variables de Entorno (Donde irán tus llaves)
 .env

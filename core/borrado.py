@@ -1,4 +1,5 @@
-import db
+from core import db
+from core import auditor
 from telegram import ReplyKeyboardRemove
 from core.grabadora import log_terminal
 

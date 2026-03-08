@@ -1,101 +1,116 @@
 import os, asyncio, tempfile
 from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
-import db
+
+from core import db
 from core.borrado import ejecutar_borrado_total
-from core.registro import manejar_paso_registro
-from core.grabadora import log_terminal
 from core.parser import parsear_evento
-from flujos.onboarding_hostess import manejar_onboarding
-from flujos.pepe_flow import manejar_pepe
-from flujos.maria_flow import manejar_maria
-from flujos.josefina_flow import manejar_josefina
-from flujos.fausto_flow import manejar_fausto
+from agentes.fase1_onboarding.sofy.sofy_router import manejar_onboarding
+from core.logger_omnisciente import obtener_chismografo, log_evento_crudo
+from core.router_jero import orquestar_mensaje
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_TOKEN")
+log = obtener_chismografo("TELEGRAM_BRIDGE")
 
-async def descargar_medio(update, context):
-    msg = update.message
-    file = None
-    if msg and msg.photo: file = await msg.photo[-1].get_file()
-    elif msg and msg.document: file = await msg.document.get_file()
-    elif msg and msg.voice: file = await msg.voice.get_file()
-    elif msg and msg.audio: file = await msg.audio.get_file()
-    if file:
-        ext = file.file_path.split('.')[-1]
-        path = os.path.join(tempfile.gettempdir(), f"{file.file_id}.{ext}")
-        await file.download_to_drive(path)
-        return path
-    return None
+# Memoria para silenciar reintentos de Telegram (ACK)
+PROCESSED_UPDATES = set()
 
 async def catch_all(update, context):
-    identidad, tipo, contenido, user_data = parsear_evento(update)
+    global PROCESSED_UPDATES
+    if not update.update_id: return
+    if update.update_id in PROCESSED_UPDATES: return
+    PROCESSED_UPDATES.add(update.update_id)
+    if len(PROCESSED_UPDATES) > 100: PROCESSED_UPDATES.pop()
+
     user = update.effective_user
     if not user: return
-
-    db_user = db.obtener_usuario(user.id)
-    estado = db_user.get('estado_onboarding') if db_user else "NUEVO"
-    log_terminal(f"{tipo} | ESTADO: {estado}", identidad, contenido)
+    message = update.message
+    if not message: return
     
-    if estado == "NUEVO":
-        db.crear_usuario(user.id, user_data['username'], 
-                        f"{user_data['first_name'] or ''} {user_data['last_name'] or ''}".strip(), 
-                        user_data['language_code'])
+    # Filtro de Contenido Basura
+    if message.sticker or message.animation or message.video:
+        await message.reply_text("🙏 <i>Sofy: Por ahora solo proceso texto, audios cortos o documentos PDF/Imágenes clave.</i>", parse_mode="HTML")
+        return
 
-    file_path = await descargar_medio(update, context)
-
-    if estado == "FAUSTO_ACTIVO":
-        await manejar_fausto(update, context, user.id, contenido)
-    elif estado == "JOSEFINA_ACTIVO":
-        await manejar_josefina(update, context, user.id, contenido)
-    elif estado == "MARIA_ACTIVO":
-        await manejar_maria(update, context, user.id, contenido)
-    elif estado == "PEPE_ACTIVO":
-        await manejar_pepe(update, context, user.id, contenido, file_path)
+    identidad, tipo, contenido, user_data = parsear_evento(update)
+    log_evento_crudo("TELEGRAM_BRIDGE", f"📥 EVENTO ENTRANTE [{tipo}] de {user.id}", update.to_dict())
+    
+    db_user = db.obtener_usuario(user.id)
+    if not db_user:
+        db.crear_usuario(user.id, None, None, user.language_code)
+        db.inicializar_adn(user.id)
+        estado = "NUEVO"
     else:
-        await manejar_onboarding(update, context, user.id, estado, contenido, file_path)
+        estado = db_user.get('estado_onboarding')
+
+    # Captura de contacto (Paso 7 y 8)
+    if tipo == "CONTACTO":
+        phone = update.message.contact.phone_number
+        db.actualizar_campo_usuario(user.id, "telefono_whatsapp", phone)
+        db.actualizar_campo_usuario(user.id, "estado_onboarding", "TYC")
+        estado = "TYC"
+        
+    custom_path = None
+    try:
+        # Detectar Audio/Voice
+        if message.voice or message.audio or message.document or message.photo:
+            attachment = message.voice or message.audio or message.document
+            if message.photo: attachment = message.photo[-1] # Best quality
+            
+            file_id = attachment.file_id
+            file = await context.bot.get_file(file_id)
+            
+            # Simple extension guess
+            ext = ".ogg" if message.voice else ".file"
+            if message.document:
+                ext = os.path.splitext(attachment.file_name)[1] if hasattr(attachment, 'file_name') and attachment.file_name else ".file"
+            elif message.photo: ext = ".jpg"
+                
+            custom_path = os.path.join(tempfile.gettempdir(), f"ms247_{file_id}{ext}")
+            await file.download_to_drive(custom_path)
+
+        await orquestar_mensaje(update, context, user.id, estado, contenido, file_path=custom_path)
+    except Exception as e:
+        log.error(f"⚠️ [TELEGRAM_BRIDGE] Falla no manejada para user {user.id}: {e}")
+        try:
+            await message.reply_text("⏳ <i>Sofy: Uy, bancame un segundo que estoy revisando una nota técnica antes de responderte... (Reintentá en un momento)</i>", parse_mode="HTML")
+        except: pass # Si la red esta caida, evitar doble crash
+    finally:
+        # Seguridad Nivel 0: Limpieza obligatoria sin importar Exceptions
+        if custom_path and os.path.exists(custom_path):
+            try:
+                os.remove(custom_path)
+                log.info(f"🧹 [CLEANUP] Archivo temporal {custom_path} eliminado.")
+            except Exception as cleanup_error:
+                log.error(f"🚨 [CLEANUP FAILED] No se pudo borrar {custom_path}: {cleanup_error}")
 
 async def manejar_callback(update, context):
-    identidad, tipo, contenido, user_data = parsear_evento(update)
     query = update.callback_query
     user = update.effective_user
-    if not user: return
-    log_terminal(tipo, identidad, contenido)
     await query.answer()
+    
+    db_user = db.obtener_usuario(user.id)
+    estado = db_user.get('estado_onboarding') if db_user else "NUEVO"
+    log.info(f"🔘 [BOTÓN] {query.data} de {user.id}")
 
-    # Botones Sofía
     if query.data == "start_flow":
         db.actualizar_campo_usuario(user.id, "estado_onboarding", "WHATSAPP")
-        await manejar_paso_registro(update, context)
+        await orquestar_mensaje(update, context, user.id, "WHATSAPP", "Iniciar Registro")
     elif query.data == "acepto_tyc":
-        db.actualizar_campo_usuario(user.id, "status_legal", True)
-        db.inicializar_adn(user.id)
-        db.actualizar_campo_usuario(user.id, "estado_onboarding", "DATOS_GENERALES")
-        await manejar_onboarding(update, context, user.id, "DATOS_GENERALES", "Acepto")
-    elif query.data == "enviar_generales":
-        await context.bot.send_message(chat_id=user.id, text="⏳ Entendido. Por favor, escribe tu Nombre, Correo y Negocio en un solo mensaje. Te estoy leyendo...")
+        db.actualizar_campo_usuario(user.id, "estado_onboarding", "DATOS")
+        await orquestar_mensaje(update, context, user.id, "DATOS", "Acepto")
     elif query.data == "confirmacion_ok":
         db.actualizar_campo_usuario(user.id, "estado_onboarding", "PASO_PEPE")
-        await manejar_onboarding(update, context, user.id, "PASO_PEPE", "Confirmado")
-    elif query.data == "confirmacion_error":
-        await context.bot.send_message(chat_id=user.id, text="✏️ Entendido. Por favor, decime qué dato está mal y cuál es el correcto.")
+        await orquestar_mensaje(update, context, user.id, "PASO_PEPE", "Confirmación Exitosa")
     elif query.data == "ir_a_pepe":
         db.actualizar_campo_usuario(user.id, "estado_onboarding", "PEPE_ACTIVO")
-        await manejar_pepe(update, context, user.id, "¡Hola Pepe! Presentate y decime qué vamos a hacer ahora.", None)
-    
-    # Botones Pepe
-    elif query.data == "pepe_mas_contexto":
-        await context.bot.send_message(chat_id=user.id, text="🎙️ Pepe: ¡Perfecto! Te escucho. Mandame un audio, texto o PDF con lo que quieras agregar.")
-    elif query.data == "pepe_avanzar_maria":
-        db.actualizar_campo_usuario(user.id, "estado_onboarding", "MARIA_ACTIVO")
-        await manejar_maria(update, context, user.id, "¡Hola María! Pepe ya hizo el diagnóstico. ¿Qué sigue?")
+        await orquestar_mensaje(update, context, user.id, "PEPE_ACTIVO", "INICIAR_DIAGNOSTICO")
 
 if __name__ == '__main__':
-    print("🚀 [SISTEMA DE TITANIO] - Ruteador Multi-Agente Activado")
+    log.info("🚀 Matriz activa. UX de Pepe y Handoff conectados.")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("eraseall", ejecutar_borrado_total))
-    app.add_handler(CommandHandler("start", manejar_paso_registro))
     app.add_handler(CallbackQueryHandler(manejar_callback))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, catch_all))
     app.run_polling()

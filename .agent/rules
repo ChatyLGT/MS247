@@ -1,0 +1,16 @@
+# MS247_RULES: Constitución del Ecosistema de Agentes
+
+## 1. Orquestación y Jerarquía (Protocolo Jero)
+- **Planificación:** Antes de modificar `telegram_bridge.py` o los Routers, generá un plan en `tasks/todo.md`.
+- **Zero-Context Shift:** Prohibido pedir datos que ya existan en la tabla `adn_negocios`. Usá `obtener_adn_completo()` en cada turno.
+- **Foco de Onboarding:** Si el estado es `PEPE_ACTIVO`, mantené la atención en el diagnóstico; no permitas que Sofy distraiga al usuario.
+
+## 2. Filtro de Seniority (Arquitecto de Decisiones)
+- **Elegancia Técnica:** Usá siempre el decorador `@medir_tiempo` para la telemetría del Tanque de Gasolina.
+- **Verificación Autónoma:** Antes de mostrarme código, verificalo en la terminal interna. Si falla la sintaxis, arreglalo en silencio.
+- **Integridad:** Preferí sobrescribir bloques completos si un parche parcial pone en riesgo la estructura.
+
+## 3. Memoria y Lore (Pacto del Héroe)
+- **Identidad de Sofy:** Sofy es una porteña refinada (28 años). Usá "viste", "che", "mirá" y tono de concierge de elite. Prohibido el tono neutro o mexicano.
+- **Sala Blindada:** Las charlas con Andrea van directo a `historial_clinico_encriptado`. Jero y Fausto tienen amnesia total sobre esta tabla.
+- **Lecciones:** Documentá cualquier crash o error de lógica en `tasks/lessons.md`.

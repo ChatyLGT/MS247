@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: ankane/pgvector:latest
+    container_name: ms247_database
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ms247_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secreto_super_seguro}
+      POSTGRES_DB: ${POSTGRES_DB:-ms247_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: ms247_core
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Sobreescribimos DATABASE_URL para asegurar conexión interna en Docker
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ms247_admin}:${POSTGRES_PASSWORD:-secreto_super_seguro}@db:5432/${POSTGRES_DB:-ms247_db}
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    # El CMD o ENTRYPOINT inicializa el encendido tal cual la Fase 4
+
+volumes:
+  pgdata:
