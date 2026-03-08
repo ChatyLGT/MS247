@@ -23,6 +23,8 @@ fi
 
 echo "[3/4] 🧠 Inyectando semilla documental (RAG PGVector)..."
 if [ -f "scripts/seed_knowledge.py" ]; then
+    # Añadir el directorio actual al PYTHONPATH para que los scripts encuentren el módulo 'core'
+    export PYTHONPATH=$PWD
     python scripts/seed_knowledge.py
     echo "✅ Conocimiento ingerido."
 else
