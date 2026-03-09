@@ -10,6 +10,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 bot = Bot(token=TOKEN)
 
 from core.gemini_multimodal import procesar_texto_puro
+from core import db
 
 async def alertar_con_soul(contenido_alerta, telegram_id):
     try:
