@@ -8,54 +8,19 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 log = obtener_chismografo("PEPE_FLOW")
 
-def compilar_cerebro_pepe():
-    base_path = "agentes/fase1_onboarding/pepe"
-    alma_compilada = ""
-    modulos = ["identity.md", "voice.md", "playbook.md"]
-    for modulo in modulos:
-        path = os.path.join(base_path, modulo)
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                alma_compilada += f"\n\n### MODULO: {modulo.upper()} ###\n{f.read()}"
-    
-    # Inyectar las 150 preguntas como anexo
-    path_cuestionario = "knowledge_base/cuestionario_pepe_150.md"
-    if os.path.exists(path_cuestionario):
-        with open(path_cuestionario, "r", encoding="utf-8") as f:
-             alma_compilada += f"\n\n### MODULO: CUESTIONARIO_150 ###\n{f.read()}"
-             
-    return alma_compilada
-
-async def manejar_pepe(update, context, telegram_id, texto, file_path=None):
+async def manejar_pepe(update, context, telegram_id, texto, file_path=None, tools=None):
     target = update.message if update.message else update.callback_query.message
-    adn = db.obtener_adn_completo(telegram_id) or {}
     
-    historial = adn.get('historial_reciente') or []
-    hilo_txt = "\n".join([f"{m['rol']}: {m['txt']}" for m in historial[-6:]]) if historial else "Sin historial aún."
+    try:
+        with open("agentes/fase1_onboarding/pepe/SOUL.md", "r", encoding="utf-8") as f:
+            soul = f.read()
+    except Exception as e:
+        soul = "Eres Pepe, consultor de negocios."
+
+    prompt_base = f"{soul}\n\nRECUERDA: Mantén el diagnóstico actualizado en la bóveda."
     
-    memoria_largo_plazo = obsidian.leer_documento(telegram_id, "02_diagnostico_pepe.md")
-    
-    # Ensamblaje de contexto para Pepe
-    ctx_negocio = f"""
-Socio: {adn.get('nombre_completo', '')}
-Empresa: {adn.get('nombre_empresa', '')}
-BÓVEDA ACTUAL (Resumen acumulado): {memoria_largo_plazo}
-"""
-    
-    cerebro_modular = compilar_cerebro_pepe()
-    
-    # REGLAS DINÁMICAS PARA PEPE (Inyectadas en caliente)
-    reglas_extra = """
-### REGLAS DE FLUJO CRÍTICAS ###
-1. **SECUENCIALIDAD**: USA EL CUESTIONARIO_150 NIVEL POR NIVEL. No saltes bloques. Empieza por Nivel 1 A, luego B, C.
-2. **TONO Y EMPATÍA**: Si el usuario responde corto, está apurado o pide avanzar, CIERRA EL NIVEL ACTUAL y ofrece pasar a María. No seas "a lo bruto".
-3. **RESUMEN**: Mantén el objeto "RESUMEN_ACUMULADO" actualizado con los datos técnicos que vayas descubriendo.
-"""
-    
-    prompt = f"{cerebro_modular}\n{reglas_extra}\n{ctx_negocio}\nHISTORIAL RECIENTE:\n{hilo_txt}"
-    
-    # Procesamos la IA directamente porque Jero ya mandó la UX de espera
-    res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)
+    # Procesamos con Tools
+    res_ia = await procesar_texto_puro(prompt_base, texto, telegram_id=telegram_id, tools=tools)
     
     if res_ia.startswith("⚠️ [SISTEMA]"):
         log.error(f"Pepe falló por error de sistema: {res_ia}")

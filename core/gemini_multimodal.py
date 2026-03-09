@@ -46,33 +46,59 @@ async def procesar_multimodal(file_path, prompt_agente):
     texto = await procesar_texto_puro(prompt_final, "[Archivo Adjunto]")
     return texto, descripcion
 
-async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, telegram_id=None, tools=None):
+async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, telegram_id=None, tools=None, response_schema=None):
     try:
         kwargs = {}
-        if modo_json:
+        if modo_json or response_schema:
             kwargs["response_mime_type"] = "application/json"
+        if response_schema:
+            kwargs["response_schema"] = response_schema
         if tools:
             kwargs["tools"] = tools
             
         config = types.GenerateContentConfig(**kwargs) if kwargs else None
-            
-        log.info(f"🤖 [GEMINI PROMPT IN] MODO JSON: {modo_json}")
-        log.info(f"[SYSTEM PROMPT]:\n{prompt_sistema}\n[USER TEXT]:\n{texto_usuario}")
-            
-        response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=f"{prompt_sistema}\n\nUsuario: {texto_usuario}\nREGLA: Máximo 1500 caracteres.",
-            config=config
-        )
+        log.info(f"🤖 [GEMINI PROMPT IN] MODO JSON: {modo_json} | SCHEMA: {response_schema is not None}")
         
-        log_evento_crudo("GEMINI_API", "✅ [GEMINI RESPONSE OUT]", {"respuesta_raw": response.text})
+        # Start a chat session for autonomous function calling
+        chat = client.aio.chats.create(model="gemini-2.0-flash", config=config)
         
-        # Telemetría
+        full_prompt = f"INSTINTO/SISTEMA:\n{prompt_sistema}\n\nUSUARIO:\n{texto_usuario}\nREGLA: Máximo 1500 caracteres."
+        response = await chat.send_message(full_prompt)
+        
+        # Telemetría de la primera llamada
         if response.usage_metadata and telegram_id:
-            tokens = response.usage_metadata.total_token_count
-            # Fire and forget
-            asyncio.create_task(asyncio.to_thread(db.restar_tokens_gasolina, telegram_id, tokens))
+            asyncio.create_task(asyncio.to_thread(db.restar_tokens_gasolina, telegram_id, response.usage_metadata.total_token_count))
+
+        # Loop de Function Calling (Lógica 2026)
+        while response.function_calls:
+            from core.tools_ms247 import handlers
+            parts_out = []
+            
+            for fc in response.function_calls:
+                name = fc.name
+                args = fc.args
+                log.info(f"🛠️ [AUTOTools] Ejecutando: {name} con {args}")
                 
+                if name in handlers:
+                    # Si la función requiere telegram_id, se lo pasamos
+                    import inspect
+                    sig = inspect.signature(handlers[name])
+                    if "telegram_id" in sig.parameters:
+                        result = handlers[name](telegram_id=telegram_id, **args)
+                    else:
+                        result = handlers[name](**args)
+                else:
+                    result = f"Error: Tool {name} no encontrada o sin handler."
+
+                parts_out.append(types.Part.from_function_response(name=name, response={"result": result}))
+
+            # Enviar el lote de respuestas de funciones de vuelta a Gemini
+            response = await chat.send_message(parts_out)
+            
+            if response.usage_metadata and telegram_id:
+                asyncio.create_task(asyncio.to_thread(db.restar_tokens_gasolina, telegram_id, response.usage_metadata.total_token_count))
+
+        log_evento_crudo("GEMINI_API", "✅ [GEMINI RESPONSE OUT]", {"respuesta_raw": response.text})
         return response.text
     except Exception as e:
         error_msg = str(e).lower()

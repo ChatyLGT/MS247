@@ -8,17 +8,21 @@ from agentes.fase1_onboarding.maria import maria # Import corregido
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-async def manejar_maria(update, context, telegram_id, texto, file_path=None):
+async def manejar_maria(update, context, telegram_id, texto, file_path=None, tools=None):
     target = update.message if update.message else update.callback_query.message
-    adn = db.obtener_adn_completo(telegram_id) or {}
     
-    historial = adn.get('historial_reciente') or []
-    hilo_txt = "\n".join([f"{m['rol']}: {m['txt']}" for m in historial[-6:]]) if historial else "Sin historial aún."
+    try:
+        with open("agentes/fase1_onboarding/maria/SOUL.md", "r", encoding="utf-8") as f:
+            soul = f.read()
+    except Exception as e:
+        soul = "Eres María, la arquitecta de la mesa directiva."
+
+    # Doctrina 2026: Prompt ligero + Tools
+    prompt = f"{soul}\n\nREGLAS 2026:\n1. Usa 'obtener_historial' si necesitas contexto previo.\n2. Usa 'leer_boveda' para el diagnóstico de Pepe."
     
-    # Llamamos a María pasándole el telegram_id
-    prompt = f"{maria.obtener_prompt(telegram_id)}\n\nHISTORIAL RECIENTE:\n{hilo_txt}"
+    # Obtener ADN para contexto ligero si es necesario (Opcional, preferible dejar que ella lo pida)
     
-    res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)
+    res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id, tools=tools)
     
     if res_ia.startswith("⚠️ [SISTEMA]"):
         log_forense("MARIA_ERROR", res_ia, telegram_id)

@@ -39,7 +39,10 @@ def guardar_memoria_hilo(telegram_id, rol, contenido, es_andrea=False):
     row = cur.fetchone()
     estado = row[0] if row else ""
     
-    if es_andrea or estado == "EMERGENCY_COACHING" or "ANDREA" in rol.upper():
+    # REGLA DE FUEGO: Andrea vive aislada.
+    es_privado = es_andrea or estado == "EMERGENCY_COACHING" or "ANDREA" in rol.upper()
+    
+    if es_privado:
         print(f"🔒 LOG DB: [SALA BLINDADA] Guardando secreto de Andrea para User {telegram_id}")
         cur.execute("INSERT INTO historial_clinico_encriptado (telegram_id, rol, contenido) VALUES (%s, %s, %s)", (telegram_id, rol, contenido))
     else:
@@ -50,6 +53,39 @@ def guardar_memoria_hilo(telegram_id, rol, contenido, es_andrea=False):
         historial.append({"rol": rol, "txt": contenido})
         historial = historial[-10:]
         cur.execute("UPDATE usuarios SET historial_reciente = %s WHERE telegram_id = %s", (json.dumps(historial), telegram_id))
+        
+        # PATRÓN COGNEE: Encolar para extracción de hechos asíncrona
+        cur.execute("INSERT INTO cola_cognee (telegram_id, rol, contenido) VALUES (%s, %s, %s)", (telegram_id, rol, contenido))
+        
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def obtener_pendientes_cognee(limit=10):
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, telegram_id, rol, contenido FROM cola_cognee WHERE procesado = FALSE ORDER BY fecha_creacion ASC LIMIT %s", (limit,))
+    res = cur.fetchall()
+    cur.close()
+    conn.close()
+    return res
+
+def marcar_procesado_cognee(id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE cola_cognee SET procesado = TRUE WHERE id = %s", (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def guardar_hecho_clave(telegram_id, entidad, relacion, valor):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO hechos_clave (telegram_id, entidad, relacion, valor) 
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (telegram_id, entidad, relacion) DO UPDATE SET valor = EXCLUDED.valor;
+    """, (telegram_id, entidad, relacion, valor))
     conn.commit()
     cur.close()
     conn.close()

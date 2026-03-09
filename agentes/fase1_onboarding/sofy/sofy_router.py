@@ -5,28 +5,25 @@ from core.gemini_multimodal import procesar_texto_puro
 
 logger = logging.getLogger("SOFY_FLOW")
 
-async def manejar_onboarding(update, context, telegram_id, estado, texto_usuario):
+async def manejar_onboarding(update, context, telegram_id, estado, texto_usuario, tools=None):
     try:
-        with open("knowledge_base/manual_ms247.txt", "r") as f:
-            manual = f.read()
-        with open("agentes/fase1_onboarding/sofy/playbook.md", "r") as f:
-            playbook = f.read()
+        with open("agentes/fase1_onboarding/sofy/SOUL.md", "r", encoding="utf-8") as f:
+            soul = f.read()
     except Exception as e:
-        logger.error(f"Error doctrina: {e}")
-        return
+        logger.error(f"Error cargando SOUL de Sofy: {e}")
+        soul = "Eres Sofy, la hostess de onboarding."
 
-    # Legajo ADN Completo
+    # Legajo ADN Completo (Información ligera)
     u = db.obtener_adn_completo(telegram_id)
-    memoria = {
+    memoria_mini = {
         "nombre": u.get("nombre_completo", "N/A"),
-        "email": u.get("email", "N/A"),
         "empresa": u.get("nombre_empresa", "N/A")
     }
 
-    prompt_sistema = f"{playbook}\n\nMANUAL:\n{manual}\n\nMEMORIA ACTUAL:\n{memoria}\nESTADO ACTUAL DEL SISTEMA: {estado}"
+    prompt_sistema = f"{soul}\n\nMEMORIA ACTUAL:\n{memoria_mini}\nESTADO ACTUAL: {estado}"
     
-    # Llamada con Modo JSON
-    res_ia = await procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=True, telegram_id=telegram_id)
+    # Llamada con Modo JSON y Tools
+    res_ia = await procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=True, telegram_id=telegram_id, tools=tools)
     
     if res_ia.startswith("⚠️ [SISTEMA]"):
         logger.error(f"Sofy falló por error de sistema: {res_ia}")

@@ -8,6 +8,7 @@ from core.parser import parsear_evento
 from agentes.fase1_onboarding.sofy.sofy_router import manejar_onboarding
 from core.logger_omnisciente import obtener_chismografo, log_evento_crudo
 from core.router_jero import orquestar_mensaje
+from core.telemetria import consultar_gasolina
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -121,6 +122,7 @@ if __name__ == '__main__':
     log.info("🚀 Matriz activa. UX de Pepe y Handoff conectados.")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("eraseall", ejecutar_borrado_total))
+    app.add_handler(CommandHandler("gasolina", consultar_gasolina))
     app.add_handler(CallbackQueryHandler(manejar_callback))
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, catch_all))
     app.run_polling()
