@@ -32,6 +32,15 @@ else
 fi
 
 echo "[4/4] 🚀 MISION CRITICA: Iniciando motores..."
+
+# Función para limpieza al apagar
+cleanup() {
+    echo "🛑 Recibida señal de apagado. Deteniendo procesos..."
+    kill $(jobs -p) 2>/dev/null || true
+    exit 0
+}
+trap cleanup SIGINT SIGTERM
+
 # Iniciamos el motor asíncrono de tareas programadas (Fausto) en background
 if [ -f "core/motor_fausto.py" ]; then
     echo "Activando Motor Asíncrono (Fausto)..."
@@ -41,7 +50,7 @@ fi
 # El proceso principal que mantiene el contenedor vivo es el Webhook/Polling (Sofy)
 if [ -f "telegram_bridge.py" ]; then
     echo "Activando Puente de Telegram (Sofy)..."
-    exec python telegram_bridge.py
+    python telegram_bridge.py
 else
     echo "❌ ERROR: No se encontró telegram_bridge.py. El contenedor se detendrá."
     exit 1

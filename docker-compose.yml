@@ -22,7 +22,7 @@ services:
   app:
     build: .
     container_name: ms247_core
-    restart: unless-stopped
+    restart: "no"
     depends_on:
       db:
         condition: service_healthy
