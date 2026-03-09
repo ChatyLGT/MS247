@@ -28,6 +28,11 @@ async def manejar_onboarding(update, context, telegram_id, estado, texto_usuario
     # Llamada con Modo JSON
     res_ia = await procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=True, telegram_id=telegram_id)
     
+    if res_ia.startswith("⚠️ [SISTEMA]"):
+        logger.error(f"Sofy falló por error de sistema: {res_ia}")
+        await update.effective_message.reply_text("💼 <b>Jero (CEO):</b> Hola, soy Jero. Sofy ha tenido un contratiempo técnico en la entrada. Por favor, intenta enviarme el mensaje de nuevo en unos segundos mientras estabilizamos el sistema.", parse_mode="HTML")
+        return
+
     # LOG DE INTELIGENCIA (Para auditoría)
     logger.info(f"🧠 [SOFY_LOG] RAW IA: {res_ia}")
     

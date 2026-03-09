@@ -21,6 +21,9 @@ async def manejar_andrea(update, context, telegram_id, contenido):
     # 3. Generar respuesta
     respuesta_raw = await procesar_texto_puro(prompt_full, contenido, telegram_id=telegram_id)
     
+    if respuesta_raw.startswith("⚠️ [SISTEMA]"):
+        return False
+    
     # 4. Guardar la interacción
     db.guardar_memoria_hilo(telegram_id, "user", contenido, es_andrea=True)
     db.guardar_memoria_hilo(telegram_id, "assistant", respuesta_raw, es_andrea=True)

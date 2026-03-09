@@ -56,6 +56,11 @@ BÓVEDA ACTUAL (Resumen acumulado): {memoria_largo_plazo}
     
     # Procesamos la IA directamente porque Jero ya mandó la UX de espera
     res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)
+    
+    if res_ia.startswith("⚠️ [SISTEMA]"):
+        log.error(f"Pepe falló por error de sistema: {res_ia}")
+        return False # Falla para el orquestador
+
     db.guardar_memoria_hilo(telegram_id, "SOCIO", texto)
 
     m_resumen = re.search(r'RESUMEN_ACUMULADO:\s*["\']?(.*?)["\']?(?=\n|$)', res_ia, re.IGNORECASE | re.DOTALL)

@@ -19,6 +19,11 @@ async def manejar_maria(update, context, telegram_id, texto, file_path=None):
     prompt = f"{maria.obtener_prompt(telegram_id)}\n\nHISTORIAL RECIENTE:\n{hilo_txt}"
     
     res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)
+    
+    if res_ia.startswith("⚠️ [SISTEMA]"):
+        log_forense("MARIA_ERROR", res_ia, telegram_id)
+        return False # Indicar falla al orquestador
+
     db.guardar_memoria_hilo(telegram_id, "SOCIO", texto)
 
     auditor.registrar_evento(telegram_id, "CEREBRO_IA_MARIA", res_ia)
@@ -45,3 +50,5 @@ async def manejar_maria(update, context, telegram_id, texto, file_path=None):
         await target.reply_text(f"<b>María:</b> {res_limpia}", reply_markup=teclado, parse_mode="HTML")
     else:
         await target.reply_text(f"<b>María:</b> {res_limpia}", parse_mode="HTML")
+    
+    return True

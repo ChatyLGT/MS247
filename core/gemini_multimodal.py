@@ -75,5 +75,13 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
                 
         return response.text
     except Exception as e:
+        error_msg = str(e).lower()
         log.error(f"🔥 ERROR GEMINI CRÍTICO: {e}")
-        return "Error en mis neuronas."
+        
+        if "429" in error_msg or "resource_exhausted" in error_msg:
+             return "⚠️ [SISTEMA]: Mis neuronas están saturadas procesando mucha información ahora mismo. Por favor, dame un minuto de respiro y vuelve a intentarlo. (Error de Quota 429)"
+        
+        if "400" in error_msg or "invalid_argument" in error_msg:
+             return "⚠️ [SISTEMA]: He tenido un pequeño cortocircuito analizando este mensaje específico. ¿Podrías intentar decírmelo de otra forma? (Error de Contexto 400)"
+
+        return "⚠️ [SISTEMA]: He tenido una falla técnica momentánea. Jero ya está revisando mis circuitos... (Error General)"

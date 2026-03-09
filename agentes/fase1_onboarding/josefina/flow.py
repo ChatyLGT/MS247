@@ -17,6 +17,10 @@ async def manejar_josefina(update, context, telegram_id, texto, file_path=None):
     prompt = f"{josefina.obtener_prompt(telegram_id)}\n\nHISTORIAL RECIENTE:\n{hilo_txt}"
     
     res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)
+    
+    if res_ia.startswith("⚠️ [SISTEMA]"):
+        return False
+
     db.guardar_memoria_hilo(telegram_id, "SOCIO", texto)
 
     log_forense("JOSEFINA", res_ia, telegram_id)

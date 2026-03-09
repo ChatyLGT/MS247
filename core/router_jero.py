@@ -24,16 +24,29 @@ async def call_sofy(state: AgentState):
     await manejar_onboarding(state["update"], state["context"], state["telegram_id"], state["estado_actual"], state["contenido"])
     return state
 
+async def intervention_jero(state: AgentState, agente_nombre: str):
+    """Intervención de Jero cuando un agente falla (Error 429, 400, etc)"""
+    target = state["update"].message if state["update"].message else state["update"].callback_query.message
+    msg_error = f"💼 <b>Jero (CEO):</b> Hola, aquí Jero. He notado una pequeña inestabilidad en la conexión de {agente_nombre}. \n\nNo te preocupes, mis ingenieros ya están revisando el sistema. ¿Te parece si intentamos retomar esto en un minuto? O si prefieres, cuéntame algo más y veré cómo puedo ayudarte yo directamente."
+    await target.reply_text(msg_error, parse_mode="HTML")
+    return state
+
 async def call_pepe(state: AgentState):
-    await manejar_pepe(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    success = await manejar_pepe(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    if not success:
+        return await intervention_jero(state, "Pepe")
     return state
 
 async def call_maria(state: AgentState):
-    await manejar_maria(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    success = await manejar_maria(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    if not success:
+        return await intervention_jero(state, "María")
     return state
 
 async def call_josefina(state: AgentState):
-    await manejar_josefina(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    success = await manejar_josefina(state["update"], state["context"], state["telegram_id"], state["contenido"], state["file_path"])
+    if not success:
+        return await intervention_jero(state, "Josefina")
     return state
 
 async def call_bruno(state: AgentState):
@@ -58,7 +71,9 @@ async def call_bruno(state: AgentState):
     return state
 
 async def call_andrea(state: AgentState):
-    await manejar_andrea(state["update"], state["context"], state["telegram_id"], state["contenido"])
+    success = await manejar_andrea(state["update"], state["context"], state["telegram_id"], state["contenido"])
+    if not success:
+        return await intervention_jero(state, "Dra. Andrea")
     return state
 
 async def call_supervisor_jero(state: AgentState):
