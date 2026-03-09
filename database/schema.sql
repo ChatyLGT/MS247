@@ -94,3 +94,9 @@ CREATE TABLE IF NOT EXISTS historial_clinico_encriptado (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- Tabla para deduplicación de mensajes (Evita el re-procesamiento por reintentos o redundancia)
+CREATE TABLE IF NOT EXISTS peticiones_procesadas (
+    update_id BIGINT PRIMARY KEY,
+    fecha_procesamiento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

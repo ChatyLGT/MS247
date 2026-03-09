@@ -165,13 +165,36 @@ async def orquestar_mensaje(update, context, telegram_id, estado_actual, conteni
     log.info(f"Input Final a procesar: {texto_a_procesar[:100]}...")
     await context.bot.send_chat_action(chat_id=telegram_id, action=ChatAction.TYPING)
     
-    # Inyectar memoria reciente para evitar amnesia
+    # --- ENSAMBLAJE DE MEMORIA INTELIGENTE ---
+    from core import obsidian, rag_service
+    
+    # 1. Recuperar Perfil de Negocio (Bóveda Obsidian)
+    perfil_negocio = obsidian.leer_documento(telegram_id, "02_diagnostico_pepe.md")
+    
+    # 2. Recuperar Contexto Relevante de Larga Distancia (RAG)
+    # Solo si el mensaje del usuario parece evocar algo específico o si no estamos en Onboarding puro.
+    contexto_recuperado = ""
+    if len(contenido) > 20: 
+        contexto_recuperado = rag_service.consultar_rag(contenido, limit=3)
+    
+    # 3. Historial Reciente (Capped a los últimos 5 para mantener latencia baja y foco)
     adn_info = db.obtener_adn_completo(telegram_id) or {}
     historial_raw = adn_info.get("historial_reciente") or []
+    historial_reciente = historial_raw[-5:] if isinstance(historial_raw, list) else []
+    historial_str = "\n".join([f"[{msg.get('rol', 'UNKNOWN')}]: {msg.get('txt', '')}" for msg in historial_reciente])
     
-    if historial_raw and isinstance(historial_raw, list):
-        historial_str = "\n".join([f"[{msg.get('rol', 'UNKNOWN')}]: {msg.get('txt', '')}" for msg in historial_raw])
-        texto_a_procesar = f"--- HISTORIAL RECIENTE ---\n{historial_str}\n--------------------------\n\n[MENSAJE ACTUAL DEL USUARIO]:\n{texto_a_procesar}"
+    # 4. Construcción del Bloque de Contexto Maestro
+    contexto_maestro = f"""### CONTEXTO DEL NEGOCIO (Bóveda):
+{perfil_negocio}
+
+### MEMORIA RELEVANTE RECUPERADA (RAG):
+{contexto_recuperado}
+
+### ÚLTIMAS INTERACCIONES:
+{historial_str}
+"""
+    
+    texto_a_procesar = f"{contexto_maestro}\n\n[MENSAJE ACTUAL DEL USUARIO]:\n{texto_a_procesar}"
 
     initial_state = {
         "update": update,

@@ -34,10 +34,25 @@ async def manejar_pepe(update, context, telegram_id, texto, file_path=None):
     hilo_txt = "\n".join([f"{m['rol']}: {m['txt']}" for m in historial[-6:]]) if historial else "Sin historial aún."
     
     memoria_largo_plazo = obsidian.leer_documento(telegram_id, "02_diagnostico_pepe.md")
-    ctx_negocio = f"BÓVEDA ACTUAL: Socio {adn.get('nombre_completo', '')} | Negocio {adn.get('nombre_empresa', '')}\nMEMORIA LARGO PLAZO: {memoria_largo_plazo}"
+    
+    # Ensamblaje de contexto para Pepe
+    ctx_negocio = f"""
+Socio: {adn.get('nombre_completo', '')}
+Empresa: {adn.get('nombre_empresa', '')}
+BÓVEDA ACTUAL (Resumen acumulado): {memoria_largo_plazo}
+"""
     
     cerebro_modular = compilar_cerebro_pepe()
-    prompt = f"{cerebro_modular}\n\n{ctx_negocio}\n\nHISTORIAL RECIENTE:\n{hilo_txt}"
+    
+    # REGLAS DINÁMICAS PARA PEPE (Inyectadas en caliente)
+    reglas_extra = """
+### REGLAS DE FLUJO CRÍTICAS ###
+1. **SECUENCIALIDAD**: USA EL CUESTIONARIO_150 NIVEL POR NIVEL. No saltes bloques. Empieza por Nivel 1 A, luego B, C.
+2. **TONO Y EMPATÍA**: Si el usuario responde corto, está apurado o pide avanzar, CIERRA EL NIVEL ACTUAL y ofrece pasar a María. No seas "a lo bruto".
+3. **RESUMEN**: Mantén el objeto "RESUMEN_ACUMULADO" actualizado con los datos técnicos que vayas descubriendo.
+"""
+    
+    prompt = f"{cerebro_modular}\n{reglas_extra}\n{ctx_negocio}\nHISTORIAL RECIENTE:\n{hilo_txt}"
     
     # Procesamos la IA directamente porque Jero ya mandó la UX de espera
     res_ia = await procesar_texto_puro(prompt, texto, telegram_id=telegram_id)

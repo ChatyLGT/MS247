@@ -132,3 +132,26 @@ def borrar_usuario(telegram_id):
     conn.commit()
     cur.close()
     conn.close()
+
+def es_peticion_duplicada(update_id):
+    """Verifica si un update_id ya fue procesado."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM peticiones_procesadas WHERE update_id = %s", (update_id,))
+    res = cur.fetchone()
+    cur.close()
+    conn.close()
+    return res is not None
+
+def registrar_peticion_procesada(update_id):
+    """Registra un update_id como procesado."""
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO peticiones_procesadas (update_id) VALUES (%s) ON CONFLICT DO NOTHING", (update_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Error registrando petición: {e}")
+    finally:
+        cur.close()
+        conn.close()

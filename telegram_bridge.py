@@ -14,14 +14,18 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 log = obtener_chismografo("TELEGRAM_BRIDGE")
 
 # Memoria para silenciar reintentos de Telegram (ACK)
-PROCESSED_UPDATES = set()
+# YA NO USAMOS ESTO LOCALMENTE, USAMOS LA DB PARA PERSISTENCIA ENTRE REINICIOS
+# PROCESSED_UPDATES = set()
 
 async def catch_all(update, context):
-    global PROCESSED_UPDATES
     if not update.update_id: return
-    if update.update_id in PROCESSED_UPDATES: return
-    PROCESSED_UPDATES.add(update.update_id)
-    if len(PROCESSED_UPDATES) > 100: PROCESSED_UPDATES.pop()
+    
+    # 1. Verificación de Duplicidad en DB (Regla de Oro para evitar el Loop del VPS)
+    if db.es_peticion_duplicada(update.update_id):
+        log.warning(f"🚫 [DUPLICADO] Ignorando update_id {update.update_id}")
+        return
+    
+    db.registrar_peticion_procesada(update.update_id)
 
     user = update.effective_user
     if not user: return
@@ -74,8 +78,9 @@ async def catch_all(update, context):
     except Exception as e:
         log.error(f"⚠️ [TELEGRAM_BRIDGE] Falla no manejada para user {user.id}: {e}")
         try:
-            await message.reply_text("⏳ <i>Sofy: Uy, bancame un segundo que estoy revisando una nota técnica antes de responderte... (Reintentá en un momento)</i>", parse_mode="HTML")
-        except: pass # Si la red esta caida, evitar doble crash
+            # Mensaje empático pero que no incita a reintento inmediato desesperado
+            await message.reply_text("⏳ <i>Sofy: Tu petición está tomando más de lo normal, pero ya la tengo en cola. No hace falta que la reenvíes, te respondo en cuanto procese los datos...</i>", parse_mode="HTML")
+        except: pass 
     finally:
         # Seguridad Nivel 0: Limpieza obligatoria sin importar Exceptions
         if custom_path and os.path.exists(custom_path):
