@@ -43,10 +43,10 @@ def guardar_memoria_hilo(telegram_id, rol, contenido, es_andrea=False):
     es_privado = es_andrea or estado == "EMERGENCY_COACHING" or "ANDREA" in rol.upper()
     
     if es_privado:
-        print(f"🔒 LOG DB: [SALA BLINDADA] Guardando secreto de Andrea para User {telegram_id}")
+        print(f"LOG DB: [SALA BLINDADA] Guardando secreto de Andrea para User {telegram_id}")
         cur.execute("INSERT INTO historial_clinico_encriptado (telegram_id, rol, contenido) VALUES (%s, %s, %s)", (telegram_id, rol, contenido))
     else:
-        print(f"📊 LOG DB: [MEMORIA GENERAL] Guardando interacción de negocio para User {telegram_id}")
+        print(f"LOG DB: [MEMORIA GENERAL] Guardando interaccion de negocio para User {telegram_id}")
         cur.execute("SELECT historial_reciente FROM usuarios WHERE telegram_id = %s", (telegram_id,))
         row = cur.fetchone()
         historial = row[0] if row and row[0] else []
@@ -106,16 +106,40 @@ def obtener_adn_completo(telegram_id):
     query = """
         SELECT u.nombre_completo, u.email, u.estado_onboarding, u.historial_reciente,
                 an.nombre_empresa, an.rubro, an.dolor_principal, an.resumen_pepe,
-                an.estructura_equipo, an.personalidad_agentes, an.rutinas_trabajo
+                an.estructura_equipo, an.personalidad_agentes, an.rutinas_trabajo,
+                u.tanque_gasolina
         FROM usuarios u
         LEFT JOIN adn_negocios an ON u.id = an.usuario_id
         WHERE u.telegram_id = %s;
     """
     cur.execute(query, (telegram_id,))
     res = cur.fetchone()
+    if res:
+        res = dict(res)
+        cur.execute("SELECT * FROM equipo_usuario WHERE telegram_id = %s", (telegram_id,))
+        res["equipo"] = cur.fetchall()
     cur.close()
     conn.close()
     return res or {}
+
+def limpiar_equipo_usuario(telegram_id):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM equipo_usuario WHERE telegram_id = %s;", (telegram_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+def agregar_agente_equipo(telegram_id, rol_socket, nivel, nombre, personalidad, estilo_narrativo="", estilo_liderazgo=""):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO equipo_usuario (telegram_id, rol_socket, nivel_intervencion, nombre_agente, personalidad, estilo_narrativo, estilo_liderazgo)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+    """, (telegram_id, rol_socket, nivel, nombre, personalidad, estilo_narrativo, estilo_liderazgo))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 def actualizar_adn(telegram_id, campo, valor):
     conn = get_connection()
@@ -154,9 +178,9 @@ def restar_tokens_gasolina(telegram_id, cantidad):
         conn.commit()
         cur.close()
         conn.close()
-        print(f"⛽ [TELEMETRÍA] {cantidad} tokens descontados del usuario {telegram_id}.")
+        print(f"TELEMETRIA: {cantidad} tokens descontados del usuario {telegram_id}.")
     except Exception as e:
-        print(f"⚠️ Error descontando tokens: {e}")
+        print(f"Error descontando tokens: {e}")
 
 def borrar_usuario(telegram_id):
     conn = get_connection()
@@ -191,3 +215,23 @@ def registrar_peticion_procesada(update_id):
     finally:
         cur.close()
         conn.close()
+
+def factory_reset():
+    """Limpia todas las tablas de la base de datos para una nueva simulación."""
+    conn = get_connection()
+    cur = conn.cursor()
+    tablas = [
+        "historial_clinico_encriptado", "equipo_usuario", "adn_negocios", 
+        "usuarios", "cola_cognee", "hechos_clave", "boveda_obsidian", 
+        "feedback_rechazos", "peticiones_procesadas"
+    ]
+    for tabla in tablas:
+        try:
+            # TRUNCATE es más limpio que DELETE para resets
+            cur.execute(f"TRUNCATE TABLE {tabla} RESTART IDENTITY CASCADE;")
+            print(f"🧹 [FACTORY RESET] Tabla '{tabla}' limpiada.")
+        except Exception as e:
+            print(f"❌ Error limpiando tabla {tabla}: {e}")
+    conn.commit()
+    cur.close()
+    conn.close()

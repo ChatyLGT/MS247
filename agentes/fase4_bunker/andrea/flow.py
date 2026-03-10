@@ -7,7 +7,10 @@ from core.grabadora import log_terminal, log_bot_response
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 async def manejar_andrea(update, context, telegram_id, contenido, tools=None):
-    log_terminal("ANDREA_FLOW", "ANDREA", f"🔒 Búnker - Mensaje recibido: {contenido[:30]}...")
+    log_terminal("ANDREA_FLOW", telegram_id, f"Bunker - Mensaje recibido: {contenido[:30]}...")
+    
+    # Asegurar PERSISTENCIA de estado para Andrea
+    db.actualizar_campo_usuario(telegram_id, "estado_onboarding", "EMERGENCY_COACHING")
 
     try:
         with open("agentes/fase4_bunker/andrea/SOUL.md", "r", encoding="utf-8") as f:
@@ -16,7 +19,7 @@ async def manejar_andrea(update, context, telegram_id, contenido, tools=None):
         soul = "Eres la Dra. Andrea, coach de alto rendimiento."
 
     # Doctrina 2026: Andrea es ultra-privada, pero puede usar herramientas para su PROPIA memoria.
-    prompt_full = f"{soul}\n\nREGLA CRÍTICA: Ignora conocimiento fuera de esta sala. Tu memoria es privada (usa obtener_historial)."
+    prompt_full = f"{soul}\n\nREGLA CRITICA: Ignora conocimiento fuera de esta sala. Tu memoria es privada (usa obtener_historial)."
 
     # Generar respuesta con tools (por si necesita su memoria blindada)
     respuesta_raw = await procesar_texto_puro(prompt_full, contenido, telegram_id=telegram_id, tools=tools)
@@ -24,7 +27,7 @@ async def manejar_andrea(update, context, telegram_id, contenido, tools=None):
     if respuesta_raw.startswith("⚠️ [SISTEMA]"):
         return False
     
-    # Guardar la interacción (es_andrea=True asegura que vaya a la tabla blindada)
+    # Guardar la interaccion (es_andrea=True asegura que vaya a la tabla blindada)
     db.guardar_memoria_hilo(telegram_id, "user", contenido, es_andrea=True)
     db.guardar_memoria_hilo(telegram_id, "assistant", respuesta_raw, es_andrea=True)
 
@@ -36,14 +39,14 @@ async def manejar_andrea(update, context, telegram_id, contenido, tools=None):
 
     # Preparar Teclado
     keyboard = [
-        [InlineKeyboardButton("📅 Agendar sesión de seguimiento", callback_data="andrea_agendar")],
-        [InlineKeyboardButton("🔙 Volver a la Sala de Juntas", callback_data="andrea_salir")]
+        [InlineKeyboardButton("Agendar sesion de seguimiento", callback_data="andrea_agendar")],
+        [InlineKeyboardButton("Volver a la Sala de Juntas", callback_data="andrea_salir")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await context.bot.send_message(
         chat_id=telegram_id, 
-        text=f"🩺 <b>Dra. Andrea</b>\n\n{respuesta_limpia}", 
+        text=f"Dra. Andrea\n\n{respuesta_limpia}", 
         reply_markup=reply_markup,
         parse_mode='HTML'
     )

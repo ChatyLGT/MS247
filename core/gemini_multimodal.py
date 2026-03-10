@@ -25,17 +25,17 @@ async def describir_contenido_multimodal(file_path):
 
     try:
         prompt = "Si es audio, transcribe TODO exactamente. Si es PDF/Imagen, describe el contenido clave detalladamente."
-        log.info(f"📤 [GEMINI VISION/AUDIO] Procesando archivo: {file_path} (MIME: {mime})")
+        log.info(f"[GEMINI VISION/AUDIO] Procesando archivo: {file_path} (MIME: {mime})")
         
         response = await client.aio.models.generate_content(
             model="gemini-2.0-flash",
             contents=[types.Part.from_bytes(data=file_bytes, mime_type=mime), prompt]
         )
-        log_evento_crudo("GEMINI_API", f"📥 [EXTRACCIÓN MULTIMODAL EXITOSA]", {"transcripcion": response.text.strip()})
+        log_evento_crudo("GEMINI_API", f"[EXTRACCION MULTIMODAL EXITOSA]", {"transcripcion": response.text.strip()})
         return response.text.strip()
     except Exception as e:
-        log.error(f"🔥 Error en percepción multimodal: {e}")
-        return f"Error en percepción: {e}"
+        log.error(f"Error en percepcion multimodal: {e}")
+        return f"Error en percepcion: {e}"
 
 import asyncio
 from core import db
@@ -57,19 +57,19 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
             kwargs["tools"] = tools
             
         config = types.GenerateContentConfig(**kwargs) if kwargs else None
-        log.info(f"🤖 [GEMINI PROMPT IN] MODO JSON: {modo_json} | SCHEMA: {response_schema is not None}")
+        log.info(f"[GEMINI PROMPT IN] MODO JSON: {modo_json} | SCHEMA: {response_schema is not None}")
         
         # Start a chat session for autonomous function calling
         chat = client.aio.chats.create(model="gemini-2.0-flash", config=config)
         
-        full_prompt = f"INSTINTO/SISTEMA:\n{prompt_sistema}\n\nUSUARIO:\n{texto_usuario}\nREGLA: Máximo 1500 caracteres."
+        full_prompt = f"INSTINTO/SISTEMA:\n{prompt_sistema}\n\nUSUARIO:\n{texto_usuario}\nREGLA: Maximo 1500 caracteres."
         response = await chat.send_message(full_prompt)
         
-        # Telemetría de la primera llamada
+        # Telemetria de la primera llamada
         if response.usage_metadata and telegram_id:
             asyncio.create_task(asyncio.to_thread(db.restar_tokens_gasolina, telegram_id, response.usage_metadata.total_token_count))
 
-        # Loop de Function Calling (Lógica 2026)
+        # Loop de Function Calling (Logica 2026)
         while response.function_calls:
             from core.tools_ms247 import handlers
             parts_out = []
@@ -77,10 +77,10 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
             for fc in response.function_calls:
                 name = fc.name
                 args = fc.args
-                log.info(f"🛠️ [AUTOTools] Ejecutando: {name} con {args}")
+                log.info(f"[AUTOTools] Ejecutando: {name} con {args}")
                 
                 if name in handlers:
-                    # Si la función requiere telegram_id, se lo pasamos
+                    # Si la funcion requiere telegram_id, se lo pasamos
                     import inspect
                     sig = inspect.signature(handlers[name])
                     if "telegram_id" in sig.parameters:
@@ -98,16 +98,16 @@ async def procesar_texto_puro(prompt_sistema, texto_usuario, modo_json=False, te
             if response.usage_metadata and telegram_id:
                 asyncio.create_task(asyncio.to_thread(db.restar_tokens_gasolina, telegram_id, response.usage_metadata.total_token_count))
 
-        log_evento_crudo("GEMINI_API", "✅ [GEMINI RESPONSE OUT]", {"respuesta_raw": response.text})
+        log_evento_crudo("GEMINI_API", "[GEMINI RESPONSE OUT]", {"respuesta_raw": response.text})
         return response.text
     except Exception as e:
         error_msg = str(e).lower()
-        log.error(f"🔥 ERROR GEMINI CRÍTICO: {e}")
+        log.error(f"ERROR GEMINI CRITICO: {e}")
         
         if "429" in error_msg or "resource_exhausted" in error_msg:
-             return "⚠️ [SISTEMA]: Mis neuronas están saturadas procesando mucha información ahora mismo. Por favor, dame un minuto de respiro y vuelve a intentarlo. (Error de Quota 429)"
+             return "[SISTEMA]: Mis neuronas estan saturadas procesando mucha informacion ahora mismo. Por favor, dame un minuto de respiro y vuelve a intentarlo. (Error de Quota 429)"
         
         if "400" in error_msg or "invalid_argument" in error_msg:
-             return "⚠️ [SISTEMA]: He tenido un pequeño cortocircuito analizando este mensaje específico. ¿Podrías intentar decírmelo de otra forma? (Error de Contexto 400)"
+             return "[SISTEMA]: He tenido un pequeño cortocircuito analizando este mensaje especifico. Podrias intentar decirmelo de otra forma? (Error de Contexto 400)"
 
-        return "⚠️ [SISTEMA]: He tenido una falla técnica momentánea. Jero ya está revisando mis circuitos... (Error General)"
+        return "[SISTEMA]: He tenido una falla tecnica momentanea. Jero ya esta revisando mis circuitos... (Error General)"

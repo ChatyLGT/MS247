@@ -19,8 +19,8 @@ def iniciar_sesion(telegram_id):
     fecha_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     nombre_archivo = os.path.join(LOG_DIR, f"sesion_{telegram_id}_{fecha_str}.txt")
     with open(nombre_archivo, "w", encoding="utf-8") as f:
-        f.write(f"=== 🚀 INICIO DE CAJA NEGRA | USUARIO: {telegram_id} | {fecha_str} ===\n\n")
-    print(f"🗄️ Caja Negra creada: {nombre_archivo}")
+        f.write(f"=== INICIO DE CAJA NEGRA | USUARIO: {telegram_id} | {fecha_str} ===\n\n")
+    print(f"Caja Negra creada: {nombre_archivo}")
     return nombre_archivo
 
 def registrar_evento(telegram_id, actor, texto):
@@ -31,4 +31,4 @@ def registrar_evento(telegram_id, actor, texto):
         with open(archivo, "a", encoding="utf-8") as f:
             f.write(entrada)
     except Exception as e:
-        print(f"❌ Error escribiendo en Caja Negra: {e}")
+        print(f"Error escribiendo en Caja Negra: {e}")

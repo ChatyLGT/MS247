@@ -27,6 +27,8 @@ async def catch_all(update, context):
         return
     
     db.registrar_peticion_procesada(update.update_id)
+    from datetime import datetime
+    db.actualizar_campo_usuario(user.id, "ultimo_acceso", datetime.now())
 
     user = update.effective_user
     if not user: return

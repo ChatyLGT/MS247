@@ -59,7 +59,7 @@ def medir_tiempo(func):
         inicio = time.perf_counter()
         resultado = await func(*args, **kwargs)
         fin = time.perf_counter()
-        logging.getLogger(func.__module__).info(f"⏱️ LATENCIA [{func.__name__}]: {fin - inicio:.4f} segundos.")
+        logging.getLogger(func.__module__).info(f"LATENCIA [{func.__name__}]: {fin - inicio:.4f} segundos.")
         return resultado
 
     @wraps(func)
@@ -67,7 +67,7 @@ def medir_tiempo(func):
         inicio = time.perf_counter()
         resultado = func(*args, **kwargs)
         fin = time.perf_counter()
-        logging.getLogger(func.__module__).info(f"⏱️ LATENCIA [{func.__name__}]: {fin - inicio:.4f} segundos.")
+        logging.getLogger(func.__module__).info(f"LATENCIA [{func.__name__}]: {fin - inicio:.4f} segundos.")
         return resultado
 
     if asyncio.iscoroutinefunction(func):
